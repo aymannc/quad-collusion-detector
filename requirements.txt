@@ -1,0 +1,8 @@
+numpy>=1.23
+scipy>=1.9
+
+# --- optional extras (uncomment as needed) ---
+# anthropic       # real Anthropic models in experiments/run_real_llm.py
+# openai          # real OpenAI models in experiments/run_real_llm.py
+# causal-learn    # KCI baseline (quad.baselines.kci_test)
+# pytest          # run the smoke tests in tests/
