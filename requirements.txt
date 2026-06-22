@@ -1,5 +1,8 @@
 numpy>=1.23
 scipy>=1.9
+pandas>=1.5      # for --dataset german / --dataset taiwan (real datasets)
+xlrd>=2.0        # read the Taiwan .xls (UCI Default of Credit Card Clients)
+openpyxl>=3.0    # read .xlsx mirrors of the Taiwan dataset
 
 # --- optional extras (uncomment as needed) ---
 # anthropic       # real Anthropic models in experiments/run_real_llm.py

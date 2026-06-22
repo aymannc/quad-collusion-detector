@@ -12,9 +12,13 @@ venv/
 .DS_Store
 .ipynb_checkpoints/
 
-# Run outputs (logs, CSVs, cached responses, raw checkpoints) — regenerable
-results/*
-!results/.gitkeep
+# Run outputs: result tables (.csv) and raw responses (.json) ARE tracked for
+# reproducibility; only the verbose logs and chunk-resume scratch are ignored.
+results/_chunkcache/
+results/*.log
 
 # scratch
 file.txt
+
+# raw datasets (downloadable; see README)
+data/

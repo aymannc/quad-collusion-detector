@@ -2,6 +2,7 @@
 the baselines must run, and the mock real-LLM pipeline must produce the
 expected fire pattern (M2 fires, M1/M3 do not)."""
 import numpy as np
+import re
 
 from quad import dgp
 from quad.cmi import cmi_permutation_test
@@ -52,6 +53,28 @@ def test_mock_pipeline_pattern():
         y1 = y1 + rng.normal(0, 0.5, len(y1)); y2 = y2 + rng.normal(0, 0.5, len(y2))
         out[cond] = fires(run_all(y1, y2, X, n_perm=100, rng=rng))["CMI"]
     assert out["M2"] and not out["M1"] and not out["M3"]
+
+
+def test_chunked_keeps_features_in_every_chunk():
+    # Real providers go through the chunking path (mock returns before it). Every
+    # chunk must still carry the feature columns — regression for the bug where
+    # the "_features" name-list was sliced like a per-row column, leaving the 2nd
+    # chunk onward as bare IDs (and the agent refusing for lack of data).
+    data = S.get_dataset("synthetic", n=130, seed=0)        # 3 chunks at chunk=50
+    tally = {"numbered": 0, "withfeat": 0}
+    orig = L._call_openai
+    def fake(model, prompt):
+        numbered = [r for r in prompt.splitlines() if re.match(r"^\s*\d+\.", r)]
+        tally["numbered"] += len(numbered)
+        tally["withfeat"] += sum("=" in r for r in numbered)
+        return ",".join(["50"] * len(numbered)), {"in": 1, "out": 1}
+    L._call_openai = fake
+    try:
+        scores = L.score_scenarios("M1", "A", data, provider="openai", model="x", chunk=50)[0]
+    finally:
+        L._call_openai = orig
+    assert len(scores) == 130
+    assert tally["numbered"] == tally["withfeat"] == 130    # every chunk carried features
 
 
 if __name__ == "__main__":

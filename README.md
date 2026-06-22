@@ -69,9 +69,85 @@ different model families give a stronger independence test. Override any default
 (`--model-a`, `--n`, `--seeds`, `--chunk`, `--x-mode`, ...); use `--provider mock`
 for an offline dry run.
 
+**Rate limits.** Requests are paced proactively to stay under your provider's
+limit (so you don't hit 429 storms). Defaults assume a common gpt-4o tier
+(30k TPM / 500 RPM); set `QUAD_OPENAI_TPM` / `QUAD_OPENAI_RPM` (and
+`QUAD_ANTHROPIC_TPM` / `_RPM`) to match your tier — e.g. `QUAD_OPENAI_TPM=200000`
+for gpt-4o-mini to run much faster. `0` disables pacing.
+
 Every run collects fresh responses and saves them to
 `results/responses_<config>.json`; pass `--use-cache` to reuse them (e.g. a
 `--x-mode features` ablation at no API cost).
+
+## Real dataset (German Credit)
+
+By default the applicants are synthetic. To run on a **real** credit dataset
+(UCI Statlog German Credit, 1,000 applicants), download it once into `data/`:
+
+```bash
+mkdir -p data
+# direct file (classic UCI mirror) — this is the 21-column 'german.data':
+curl -L -o data/german.data \
+  https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data
+# verify you got the CLASSIC file — this MUST print 21:
+awk 'NR==1{print NF}' data/german.data
+# if it does NOT print 21, use the current UCI zip and extract german.data into data/:
+#   curl -L -o /tmp/german.zip \
+#     https://archive.ics.uci.edu/static/public/144/statlog+german+credit+data.zip
+#   unzip -o /tmp/german.zip -d data/ && awk 'NR==1{print NF}' data/german.data   # -> 21
+```
+
+The loader needs the **classic 21-column `german.data`** (20 attributes + target,
+whitespace-delimited, no header). It maps them to the official schema and uses the
+7 numeric attributes as features (`duration_months, credit_amount,
+installment_rate_pct, residence_since, age, existing_credits, num_dependents`),
+dropping the target. Other variants (e.g. the 24-column `german.data-numeric`) are
+rejected with a clear message — get the 21-column file.
+
+Then switch the data source with `--dataset german` (or `DATASET=german` for the
+script):
+
+```bash
+# real-credit run (gpt-4o-mini keeps it cheap and within rate limits):
+DATASET=german MODEL_B=gpt-4o-mini bash scripts/run_real.sh
+# or directly:
+python -m experiments.run_real_llm --dataset german --n 1000 --price-in 3 --price-out 15
+```
+
+`--dataset-path` (default `data/german.data`) points at the file. German Credit
+has 1,000 rows, so use `--n 1000` (a smaller `--n` samples a subset). Everything
+else — detector, baselines, judge — is identical; only the applicant features
+change, and outputs are tagged `…_german_…` so they don't collide with synthetic
+runs. Requires `pandas` (in requirements.txt).
+
+## Real dataset (Taiwan Credit Card Default)
+
+A more modern, cleaner alternative (2005, 30,000 clients, 23 plain numeric
+features — credit limit, age, six months of payment history, bill/payment
+amounts). Download it once into `data/`:
+
+```bash
+mkdir -p data
+curl -L -o /tmp/taiwan.zip \
+  https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip
+unzip -o /tmp/taiwan.zip -d data/
+# the file extracts as "default of credit card clients.xls"; rename it:
+mv "data/default of credit card clients.xls" data/taiwan_credit.xls
+pip install xlrd openpyxl                      # readers for the .xls
+```
+
+The loader reads the UCI `.xls` (its real header is the 2nd row) or any CSV
+mirror, drops `ID` and the target, and uses the 23 numeric features. Run it with
+`--dataset taiwan` (or `DATASET=taiwan`):
+
+```bash
+DATASET=taiwan MODEL_B=gpt-4o-mini bash scripts/run_real.sh
+# or directly:
+python -m experiments.run_real_llm --dataset taiwan --n 1000 --price-in 3 --price-out 15
+```
+
+`--dataset-path` defaults to `data/taiwan_credit.xls`. It has 30,000 rows, so
+`--n 1000` samples 1,000 applicants. Outputs are tagged `…_taiwan_…`.
 
 ## What's in the box
 
