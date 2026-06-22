@@ -27,12 +27,14 @@ import re
 import sys
 
 R = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
-SWEEPS = {"r1_fp.csv", "r2_power.csv", "r3_separability.csv", "table3_methods.csv"}
+SWEEPS = {"r1_fp.csv", "r2_power.csv", "r3_separability.csv", "table3_methods.csv",
+          "MANIFEST.md"}
 
 _KEEP = [
-    re.compile(r"^real_llm_(aggregate|perseed)_anthropic-openai_(synthetic_|taiwan_)?n1000_x(reference|features)_S15\.csv$"),
-    re.compile(r"^real_llm_(aggregate|perseed)_anthropic-openai_taiwan_n1000_x(reference|features)_S\d+\.csv$"),
-    re.compile(r"^responses_anthropic-openai_(synthetic|taiwan)_n1000_s\d+\.json$"),
+    # real-LLM runs for ANY real dataset (synthetic / german / taiwan), any N or
+    # seed count — keeps the PoC and full runs; only mock/pre-pipeline scratch is removed.
+    re.compile(r"^real_llm_(aggregate|perseed)_anthropic-openai_(synthetic|german|taiwan)_n\d+_x(reference|features)_S\d+\.csv$"),
+    re.compile(r"^responses_anthropic-openai_(synthetic|german|taiwan)_n\d+_s\d+\.json$"),
 ]
 _RENAME = re.compile(r"^real_llm_(aggregate|perseed)_anthropic-openai_n1000_x(reference|features)_S15\.csv$")
 
